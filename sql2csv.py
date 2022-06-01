@@ -152,4 +152,7 @@ class SQL:
 if __name__ == "__main__":
     # 请务必保证当前目录下 .sql 文件有且仅有一个
     sql_name = list(filter(lambda i: i.endswith(".sql"), os.listdir()))[0]
-    SQL(sql_name).tables_to_csv()
+    sql = SQL(sql_name)
+    sql.to_csv()
+    sql.props_to_csv()
+    sql.tables_to_csv()
