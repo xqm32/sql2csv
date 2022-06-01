@@ -37,6 +37,35 @@ class SQL:
     def foreign_key_list(self, table_name: str):
         return self.db.execute(f"PRAGMA foreign_key_list({table_name})").fetchall()
 
+    def tables_to_csv(self):
+        tables = pandas.DataFrame(columns=["name", "props"])
+
+        for i in self.sqlite_schema:
+            if i["type"] == "table" and not i["name"].startswith("sqlite"):
+                print(f"{i['name']}", end="\t")
+
+                records = dlist_from_rlist(self.table_info(i["name"]))
+                records = pandas.DataFrame.from_records(records)
+
+                tab = pandas.DataFrame(
+                    [[i["name"], ", ".join(records["name"].to_list())]],
+                    columns=["name", "props"],
+                )
+                tables = pandas.concat(
+                    [tables, tab],
+                    ignore_index=True,
+                )
+
+                print(" √")
+
+        tables.rename(
+            {"name": "表名", "props": "属性"},
+            axis="columns",
+            inplace=True,
+        )
+
+        tables.to_csv("tables.csv", index=False)
+
     def props_to_csv(self):
         props = pandas.DataFrame(
             columns=["cid", "name", "type", "notnull", "dflt_value", "pk", "fk"]
@@ -123,4 +152,4 @@ class SQL:
 if __name__ == "__main__":
     # 请务必保证当前目录下 .sql 文件有且仅有一个
     sql_name = list(filter(lambda i: i.endswith(".sql"), os.listdir()))[0]
-    SQL(sql_name).props_to_csv()
+    SQL(sql_name).tables_to_csv()
