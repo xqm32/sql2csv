@@ -56,6 +56,10 @@ if __name__ == "__main__":
                     records["name"] == j["from"], "fk"
                 ] = f"{j['table']}({j['to']})"
 
+            records.loc[records["pk"] != 1, "pk"] = ""
+            records.loc[records["pk"] == 1, "pk"] = "主键"
+            records.loc[records["notnull"] != 1, "notnull"] = ""
+            records.loc[records["notnull"] == 1, "notnull"] = "不为空"
             records.rename(
                 {
                     "cid": "编号",
