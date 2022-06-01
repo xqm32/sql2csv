@@ -39,7 +39,7 @@ class SQL:
 
     def to_csv(self):
         for i in self.sqlite_schema:
-            if i["type"] == "table":
+            if i["type"] == "table" and not i["name"].startswith("sqlite"):
                 print(f"{i['name']}", end="\t")
 
                 records = dlist_from_rlist(self.table_info(i["name"]))
