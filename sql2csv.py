@@ -37,6 +37,51 @@ class SQL:
     def foreign_key_list(self, table_name: str):
         return self.db.execute(f"PRAGMA foreign_key_list({table_name})").fetchall()
 
+    def props_to_csv(self):
+        props = pandas.DataFrame(
+            columns=["cid", "name", "type", "notnull", "dflt_value", "pk", "fk"]
+        )
+
+        for i in self.sqlite_schema:
+            if i["type"] == "table" and not i["name"].startswith("sqlite"):
+                print(f"{i['name']}", end="\t")
+
+                records = dlist_from_rlist(self.table_info(i["name"]))
+                records = pandas.DataFrame.from_records(records)
+                records["fk"] = ""
+                records["table"] = i["name"]
+
+                foregin_keys = self.foreign_key_list(i["name"])
+                for j in foregin_keys:
+                    records.loc[
+                        records["name"] == j["from"], "fk"
+                    ] = f"{j['table']}({j['to']})"
+
+                props = pandas.concat([props, records], ignore_index=True)
+
+                print(" √")
+
+        props.loc[props["pk"] != 1, "pk"] = ""
+        props.loc[props["pk"] == 1, "pk"] = "主键"
+        props.loc[props["notnull"] != 1, "notnull"] = ""
+        props.loc[props["notnull"] == 1, "notnull"] = "不为空"
+        props.rename(
+            {
+                "cid": "编号",
+                "name": "名称",
+                "type": "数据类型",
+                "notnull": "不为空",
+                "dflt_value": "默认值",
+                "pk": "主键约束",
+                "fk": "外键约束",
+                "table": "表名",
+            },
+            axis="columns",
+            inplace=True,
+        )
+
+        props.to_csv("props.csv", index=False)
+
     def to_csv(self):
         for i in self.sqlite_schema:
             if i["type"] == "table" and not i["name"].startswith("sqlite"):
@@ -78,4 +123,4 @@ class SQL:
 if __name__ == "__main__":
     # 请务必保证当前目录下 .sql 文件有且仅有一个
     sql_name = list(filter(lambda i: i.endswith(".sql"), os.listdir()))[0]
-    SQL(sql_name).to_csv()
+    SQL(sql_name).props_to_csv()
