@@ -14,64 +14,68 @@ def dlist_from_rlist(rlist: List[sqlite3.Row]):
     return [dict_from_row(i) for i in rlist]
 
 
-# 获取表信息
-def table_info(table_name: str):
-    return db.execute(f"PRAGMA table_info({table_name})").fetchall()
+class SQL:
+    def __init__(self, sql_name: str):
+        self.db = sqlite3.connect(":memory:")
+        self.db.row_factory = sqlite3.Row
+        self.db.execute("PRAGMA foreign_keys = ON")
 
+        with open(sql_name, "r", encoding="utf-8") as f:
+            self.db.executescript(f.read())
 
-# 获取表所有信息
-def table_xinfo(table_name: str):
-    return db.execute(f"PRAGMA table_xinfo({table_name})").fetchall()
+        self.sqlite_schema = self.db.execute("SELECT * FROM sqlite_schema").fetchall()
 
+    # 获取表信息
+    def table_info(self, table_name: str):
+        return self.db.execute(f"PRAGMA table_info({table_name})").fetchall()
 
-# 获取表的外键
-def foreign_key_list(table_name: str):
-    return db.execute(f"PRAGMA foreign_key_list({table_name})").fetchall()
+    # 获取表所有信息
+    def table_xinfo(self, table_name: str):
+        return self.db.execute(f"PRAGMA table_xinfo({table_name})").fetchall()
+
+    # 获取表的外键
+    def foreign_key_list(self, table_name: str):
+        return self.db.execute(f"PRAGMA foreign_key_list({table_name})").fetchall()
+
+    def to_csv(self):
+        for i in self.sqlite_schema:
+            if i["type"] == "table":
+                print(f"{i['name']}", end="\t")
+
+                records = dlist_from_rlist(self.table_info(i["name"]))
+                records = pandas.DataFrame.from_records(records)
+                records["fk"] = ""
+
+                foregin_keys = self.foreign_key_list(i["name"])
+                for j in foregin_keys:
+                    records.loc[
+                        records["name"] == j["from"], "fk"
+                    ] = f"{j['table']}({j['to']})"
+
+                records.loc[records["pk"] != 1, "pk"] = ""
+                records.loc[records["pk"] == 1, "pk"] = "主键"
+                records.loc[records["notnull"] != 1, "notnull"] = ""
+                records.loc[records["notnull"] == 1, "notnull"] = "不为空"
+                records.rename(
+                    {
+                        "cid": "编号",
+                        "name": "名称",
+                        "type": "数据类型",
+                        "notnull": "不为空",
+                        "dflt_value": "默认值",
+                        "pk": "主键约束",
+                        "fk": "外键约束",
+                    },
+                    axis="columns",
+                    inplace=True,
+                )
+
+                records.to_csv(f"{i['name']}.csv", index=False)
+
+                print(" √")
 
 
 if __name__ == "__main__":
     # 请务必保证当前目录下 .sql 文件有且仅有一个
-    sql = list(filter(lambda i: i.endswith(".sql"), os.listdir()))[0]
-
-    db = sqlite3.connect(":memory:")
-    db.row_factory = sqlite3.Row
-    db.execute("PRAGMA foreign_keys = ON")
-
-    with open(sql, "r", encoding="utf-8") as f:
-        db.executescript(f.read())
-
-    sqlite_schema = db.execute("SELECT * FROM sqlite_schema").fetchall()
-
-    for i in sqlite_schema:
-        if i["type"] == "table":
-            print(f"{i['name']}")
-
-            records = dlist_from_rlist(table_info(i["name"]))
-            records = pandas.DataFrame.from_records(records)
-            records["fk"] = ""
-
-            foregin_keys = foreign_key_list(i["name"])
-            for j in foregin_keys:
-                records.loc[
-                    records["name"] == j["from"], "fk"
-                ] = f"{j['table']}({j['to']})"
-
-            records.loc[records["pk"] != 1, "pk"] = ""
-            records.loc[records["pk"] == 1, "pk"] = "主键"
-            records.loc[records["notnull"] != 1, "notnull"] = ""
-            records.loc[records["notnull"] == 1, "notnull"] = "不为空"
-            records.rename(
-                {
-                    "cid": "编号",
-                    "name": "名称",
-                    "type": "数据类型",
-                    "notnull": "不为空",
-                    "dflt_value": "默认值",
-                    "pk": "主键约束",
-                    "fk": "外键约束",
-                },
-                axis="columns",
-                inplace=True,
-            )
-
-            records.to_csv(f"{i['name']}.csv", index=False)
+    sql_name = list(filter(lambda i: i.endswith(".sql"), os.listdir()))[0]
+    SQL(sql_name).to_csv()
