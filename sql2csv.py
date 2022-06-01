@@ -68,7 +68,7 @@ class SQL:
 
     def props_to_csv(self):
         props = pandas.DataFrame(
-            columns=["cid", "name", "type", "notnull", "dflt_value", "pk", "fk"]
+            columns=["cid", "name", "type", "notnull", "dflt_value", "pk", "fk", "table"]
         )
 
         for i in self.sqlite_schema:
