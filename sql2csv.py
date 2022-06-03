@@ -71,6 +71,12 @@ class SQL:
             inplace=True,
         )
 
+    def save_DataFrame(self, df: pandas.DataFrame, path: str, **args) -> None:
+        if args:
+            df.to_csv(path, **args)
+        else:
+            df.to_csv(path, index_label="编号")
+
     def tables_to_csv(self) -> None:
         tables = pandas.DataFrame(columns=["name", "props"])
 
@@ -97,7 +103,7 @@ class SQL:
             axis="columns",
             inplace=True,
         )
-        tables.to_csv("tables.csv", index=False)
+        self.save_DataFrame(tables, "tables.csv")
 
     def props_to_csv(self) -> None:
         props = pandas.DataFrame(
@@ -124,8 +130,9 @@ class SQL:
 
                 print(" √")
 
+        props.drop("cid", axis="columns", inplace=True)
         self.localize_DataFrame(props)
-        props.to_csv("props.csv", index=False)
+        self.save_DataFrame(props, "props.csv")
 
     def to_csv(self) -> None:
         for i in self.sqlite_schema:
@@ -134,8 +141,9 @@ class SQL:
 
                 records = self.DataFrame_from_table(i["name"])
 
+                records.drop("cid", axis="columns", inplace=True)
                 self.localize_DataFrame(records)
-                records.to_csv(f"{i['name']}.csv", index=False)
+                self.save_DataFrame(records, f"{i['name']}.csv")
 
                 print(" √")
 
