@@ -48,6 +48,27 @@ class SQL:
             records.loc[records["name"] == j["from"], "fk"] = f"{j['table']}({j['to']})"
 
         return records
+    
+    # 原地本地化表格
+    def localize_DataFrame(self, df: pandas.DataFrame):
+        df.loc[df["pk"] != 1, "pk"] = ""
+        df.loc[df["pk"] == 1, "pk"] = "主键"
+        df.loc[df["notnull"] != 1, "notnull"] = ""
+        df.loc[df["notnull"] == 1, "notnull"] = "不为空"
+        df.rename(
+            {
+                "cid": "编号",
+                "name": "名称",
+                "type": "数据类型",
+                "notnull": "不为空",
+                "dflt_value": "默认值",
+                "pk": "主键约束",
+                "fk": "外键约束",
+                "table": "表名",
+            },
+            axis="columns",
+            inplace=True,
+        )
 
     def tables_to_csv(self):
         tables = pandas.DataFrame(columns=["name", "props"])
@@ -75,7 +96,6 @@ class SQL:
             axis="columns",
             inplace=True,
         )
-
         tables.to_csv("tables.csv", index=False)
 
     def props_to_csv(self):
@@ -103,25 +123,7 @@ class SQL:
 
                 print(" √")
 
-        props.loc[props["pk"] != 1, "pk"] = ""
-        props.loc[props["pk"] == 1, "pk"] = "主键"
-        props.loc[props["notnull"] != 1, "notnull"] = ""
-        props.loc[props["notnull"] == 1, "notnull"] = "不为空"
-        props.rename(
-            {
-                "cid": "编号",
-                "name": "名称",
-                "type": "数据类型",
-                "notnull": "不为空",
-                "dflt_value": "默认值",
-                "pk": "主键约束",
-                "fk": "外键约束",
-                "table": "表名",
-            },
-            axis="columns",
-            inplace=True,
-        )
-
+        self.localize_DataFrame(props)
         props.to_csv("props.csv", index=False)
 
     def to_csv(self):
@@ -131,24 +133,7 @@ class SQL:
 
                 records = self.DataFrame_from_table(i["name"])
 
-                records.loc[records["pk"] != 1, "pk"] = ""
-                records.loc[records["pk"] == 1, "pk"] = "主键"
-                records.loc[records["notnull"] != 1, "notnull"] = ""
-                records.loc[records["notnull"] == 1, "notnull"] = "不为空"
-                records.rename(
-                    {
-                        "cid": "编号",
-                        "name": "名称",
-                        "type": "数据类型",
-                        "notnull": "不为空",
-                        "dflt_value": "默认值",
-                        "pk": "主键约束",
-                        "fk": "外键约束",
-                    },
-                    axis="columns",
-                    inplace=True,
-                )
-
+                self.localize_DataFrame(records)
                 records.to_csv(f"{i['name']}.csv", index=False)
 
                 print(" √")
