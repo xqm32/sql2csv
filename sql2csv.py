@@ -37,6 +37,18 @@ class SQL:
     def foreign_key_list(self, table_name: str):
         return self.db.execute(f"PRAGMA foreign_key_list({table_name})").fetchall()
 
+    # 将 table 处理为 DataFrame
+    def DataFrame_from_table(self, table_name: str):
+        records = dlist_from_rlist(self.table_info(table_name))
+        records = pandas.DataFrame.from_records(records)
+        records["fk"] = ""
+
+        foregin_keys = self.foreign_key_list(table_name)
+        for j in foregin_keys:
+            records.loc[records["name"] == j["from"], "fk"] = f"{j['table']}({j['to']})"
+
+        return records
+
     def tables_to_csv(self):
         tables = pandas.DataFrame(columns=["name", "props"])
 
@@ -68,23 +80,24 @@ class SQL:
 
     def props_to_csv(self):
         props = pandas.DataFrame(
-            columns=["cid", "name", "type", "notnull", "dflt_value", "pk", "fk", "table"]
+            columns=[
+                "cid",
+                "name",
+                "type",
+                "notnull",
+                "dflt_value",
+                "pk",
+                "fk",
+                "table",
+            ]
         )
 
         for i in self.sqlite_schema:
             if i["type"] == "table" and not i["name"].startswith("sqlite"):
                 print(f"{i['name']}", end="\t")
 
-                records = dlist_from_rlist(self.table_info(i["name"]))
-                records = pandas.DataFrame.from_records(records)
-                records["fk"] = ""
+                records = self.DataFrame_from_table(i["name"])
                 records["table"] = i["name"]
-
-                foregin_keys = self.foreign_key_list(i["name"])
-                for j in foregin_keys:
-                    records.loc[
-                        records["name"] == j["from"], "fk"
-                    ] = f"{j['table']}({j['to']})"
 
                 props = pandas.concat([props, records], ignore_index=True)
 
@@ -116,15 +129,7 @@ class SQL:
             if i["type"] == "table" and not i["name"].startswith("sqlite"):
                 print(f"{i['name']}", end="\t")
 
-                records = dlist_from_rlist(self.table_info(i["name"]))
-                records = pandas.DataFrame.from_records(records)
-                records["fk"] = ""
-
-                foregin_keys = self.foreign_key_list(i["name"])
-                for j in foregin_keys:
-                    records.loc[
-                        records["name"] == j["from"], "fk"
-                    ] = f"{j['table']}({j['to']})"
+                records = self.DataFrame_from_table(i["name"])
 
                 records.loc[records["pk"] != 1, "pk"] = ""
                 records.loc[records["pk"] == 1, "pk"] = "主键"
