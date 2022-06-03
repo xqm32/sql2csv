@@ -1,21 +1,22 @@
-import sqlite3
 import os
-from typing import List
+import sqlite3
+from typing import Dict, List
 
 import pandas
 
+
 # 将 row 转换为 dict
-def dict_from_row(row: sqlite3.Row):
+def dict_from_row(row: sqlite3.Row) -> Dict:
     return dict(zip(row.keys(), row))
 
 
 # 将 row 列表转换为 dict 列表
-def dlist_from_rlist(rlist: List[sqlite3.Row]):
+def dlist_from_rlist(rlist: List[sqlite3.Row]) -> List:
     return [dict_from_row(i) for i in rlist]
 
 
 class SQL:
-    def __init__(self, sql_name: str):
+    def __init__(self, sql_name: str) -> None:
         self.db = sqlite3.connect(":memory:")
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA foreign_keys = ON")
@@ -26,19 +27,19 @@ class SQL:
         self.sqlite_schema = self.db.execute("SELECT * FROM sqlite_schema").fetchall()
 
     # 获取表信息
-    def table_info(self, table_name: str):
+    def table_info(self, table_name: str) -> List[sqlite3.Row]:
         return self.db.execute(f"PRAGMA table_info({table_name})").fetchall()
 
     # 获取表所有信息
-    def table_xinfo(self, table_name: str):
+    def table_xinfo(self, table_name: str) -> List[sqlite3.Row]:
         return self.db.execute(f"PRAGMA table_xinfo({table_name})").fetchall()
 
     # 获取表的外键
-    def foreign_key_list(self, table_name: str):
+    def foreign_key_list(self, table_name: str) -> List[sqlite3.Row]:
         return self.db.execute(f"PRAGMA foreign_key_list({table_name})").fetchall()
 
     # 将 table 处理为 DataFrame
-    def DataFrame_from_table(self, table_name: str):
+    def DataFrame_from_table(self, table_name: str) -> pandas.DataFrame:
         records = dlist_from_rlist(self.table_info(table_name))
         records = pandas.DataFrame.from_records(records)
         records["fk"] = ""
@@ -48,9 +49,9 @@ class SQL:
             records.loc[records["name"] == j["from"], "fk"] = f"{j['table']}({j['to']})"
 
         return records
-    
+
     # 原地本地化表格
-    def localize_DataFrame(self, df: pandas.DataFrame):
+    def localize_DataFrame(self, df: pandas.DataFrame) -> None:
         df.loc[df["pk"] != 1, "pk"] = ""
         df.loc[df["pk"] == 1, "pk"] = "主键"
         df.loc[df["notnull"] != 1, "notnull"] = ""
@@ -70,7 +71,7 @@ class SQL:
             inplace=True,
         )
 
-    def tables_to_csv(self):
+    def tables_to_csv(self) -> None:
         tables = pandas.DataFrame(columns=["name", "props"])
 
         for i in self.sqlite_schema:
@@ -98,7 +99,7 @@ class SQL:
         )
         tables.to_csv("tables.csv", index=False)
 
-    def props_to_csv(self):
+    def props_to_csv(self) -> None:
         props = pandas.DataFrame(
             columns=[
                 "cid",
@@ -126,7 +127,7 @@ class SQL:
         self.localize_DataFrame(props)
         props.to_csv("props.csv", index=False)
 
-    def to_csv(self):
+    def to_csv(self) -> None:
         for i in self.sqlite_schema:
             if i["type"] == "table" and not i["name"].startswith("sqlite"):
                 print(f"{i['name']}", end="\t")
