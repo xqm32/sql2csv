@@ -71,12 +71,14 @@ class SQL:
             inplace=True,
         )
 
+    # 保存数据框
     def save_DataFrame(self, df: pandas.DataFrame, path: str, **args) -> None:
         if args:
             df.to_csv(path, **args)
         else:
             df.to_csv(path, index_label="编号")
 
+    # 将表、属性转为 csv 文件
     def tables_to_csv(self) -> None:
         tables = pandas.DataFrame(columns=["name", "props"])
 
@@ -105,6 +107,7 @@ class SQL:
         )
         self.save_DataFrame(tables, "tables.csv")
 
+    # 将属性转为 csv 文件
     def props_to_csv(self) -> None:
         props = pandas.DataFrame(
             columns=[
@@ -134,6 +137,7 @@ class SQL:
         self.localize_DataFrame(props)
         self.save_DataFrame(props, "props.csv")
 
+    # 将各个表转为 csv 文件
     def to_csv(self) -> None:
         for i in self.sqlite_schema:
             if i["type"] == "table" and not i["name"].startswith("sqlite"):
