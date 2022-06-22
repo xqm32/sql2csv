@@ -16,7 +16,10 @@ def dlist_from_rlist(rlist: List[sqlite3.Row]) -> List:
 
 
 class SQL:
-    def __init__(self, sql_name: str) -> None:
+    def __init__(self, sql_name: str, csv_encoding="utf-8") -> None:
+        # 输出 csv 文件的编码
+        self.csv_encoding = csv_encoding
+
         self.db = sqlite3.connect(":memory:")
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA foreign_keys = ON")
@@ -74,9 +77,9 @@ class SQL:
     # 保存数据框
     def save_DataFrame(self, df: pandas.DataFrame, path: str, **args) -> None:
         if args:
-            df.to_csv(path, **args)
+            df.to_csv(path, encoding=self.csv_encoding, **args)
         else:
-            df.to_csv(path, index_label="编号")
+            df.to_csv(path, encoding=self.csv_encoding, index_label="编号")
 
     # 将表、属性转为 csv 文件
     def tables_to_csv(self) -> None:
